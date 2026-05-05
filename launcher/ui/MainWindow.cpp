@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 /*
- *  Prism Launcher - Minecraft Launcher
+ *  J3Launcher - Minecraft Launcher
  *  Copyright (C) 2022 Sefa Eyeoglu <contact@scrumplex.net>
  *  Copyright (C) 2023 TheKodeToad <TheKodeToad@proton.me>
  *
@@ -842,16 +842,51 @@ QString intListToString(const QList<int>& list)
     return slist.join(',');
 }
 
-void MainWindow::onCatToggled(bool state)
-{
-    setCatBackground(state);
-    APPLICATION->settings()->set("TheCat", state);
-}
-
 void MainWindow::setCatBackground(bool enabled)
 {
+    // Update the internal toggle for painting the cat/background
     view->setPaintCat(enabled);
-    view->viewport()->repaint();
+
+    if (enabled) {
+        QString customPath = APPLICATION->settings()->get("CustomBackgroundPath").toString();
+        
+        // If a custom image exists, apply it via stylesheet since setBackground() is missing
+        if (!customPath.isEmpty() && QFile::exists(customPath)) {
+            view->setStyleSheet(QString(
+                "background-image: url(%1);"
+                "background-position: center;"
+                "background-repeat: no-repeat;"
+                "background-attachment: fixed;"
+                "border: none;"
+            ).arg(customPath));
+        } else {
+            // Fallback to the default theme logic if no custom image is set
+            view->setStyleSheet(""); 
+        }
+    } else {
+        // Clear styles if the background is disabled
+        view->setStyleSheet("");
+    }
+
+    // Request a redraw of the viewport
+    view->viewport()->update();
+}
+
+void MainWindow::onCatToggled(bool checked)
+{
+    // Save the new state to settings
+    APPLICATION->settings()->set("TheCat", checked);
+    
+    // Update the background immediately
+    setCatBackground(checked);
+}
+
+void MainWindow::onCatChanged(int index)
+{
+    Q_UNUSED(index);
+    // Refresh the background if it's currently enabled
+    bool cat_enable = APPLICATION->settings()->get("TheCat").toBool();
+    setCatBackground(cat_enable);
 }
 
 void MainWindow::runModalTask(Task* task)
@@ -1020,7 +1055,7 @@ void MainWindow::processURLs(QList<QUrl> urls)
                 emit APPLICATION->oauthReplyRecieved(receivedData);
                 continue;
             } else if ((url.scheme() == "prismlauncher" || url.scheme() == BuildConfig.LAUNCHER_APP_BINARY_NAME) && isExternalURLImport) {
-                // PrismLauncher URL protocol modpack import
+                // J3Launcher URL protocol modpack import
                 // works for any prism fork
                 // preferred import format: prismlauncher://import?url=ENCODED
                 const auto host = url.host().toLower();
@@ -1367,7 +1402,7 @@ void MainWindow::globalSettingsClosed()
     updateThemeMenu();
     updateStatusCenter();
     // This needs to be done to prevent UI elements disappearing in the event the config is changed
-    // but Prism Launcher exits abnormally, causing the window state to never be saved:
+    // but J3Launcher exits abnormally, causing the window state to never be saved:
     APPLICATION->settings()->set("MainWindowState", QString::fromUtf8(saveState().toBase64()));
     update();
 }
@@ -1462,11 +1497,6 @@ void MainWindow::newsButtonClicked()
     NewsDialog news_dialog(entries, this);
     news_dialog.toggleArticleList();
     news_dialog.exec();
-}
-
-void MainWindow::onCatChanged(int)
-{
-    setCatBackground(APPLICATION->settings()->get("TheCat").toBool());
 }
 
 void MainWindow::on_actionAbout_triggered()
@@ -1776,4 +1806,26 @@ void MainWindow::refreshCurrentInstance()
 {
     auto current = view->selectionModel()->currentIndex();
     instanceChanged(current, current);
+}
+
+void MainWindow::applyCustomBackground() {
+    QString bgPath = APPLICATION->settings()->get("CustomBackgroundPath").toString();
+
+    if (!bgPath.isEmpty() && QFile::exists(bgPath)) {
+        // We target the centralWidget AND make the view transparent so we can see through it
+        ui->centralWidget->setStyleSheet(QString(
+            "#centralWidget {"
+            "  background-image: url('%1');"
+            "  background-position: center;"
+            "  background-repeat: no-repeat;"
+            "  background-size: cover;"
+            "}"
+            "InstanceView, QTreeView, QListView {"
+            "  background: transparent;"
+            "  border: none;"
+            "}"
+        ).arg(bgPath));
+    } else {
+        ui->centralWidget->setStyleSheet("#centralWidget { background-image: none; }");
+    }
 }

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 /*
- *  Prism Launcher - Minecraft Launcher
+ *  J3Launcher - Minecraft Launcher
  *  Copyright (C) 2025 TheKodeToad <TheKodeToad@proton.me>
  *  Copyright (C) 2022 Tayou <git@tayou.org>
  *
@@ -50,6 +50,27 @@ AppearanceWidget::AppearanceWidget(bool themesOnly, QWidget* parent)
     : QWidget(parent), m_ui(new Ui::AppearanceWidget), m_themesOnly(themesOnly)
 {
     m_ui->setupUi(this);
+
+    // --- J3 CUSTOM BACKGROUND MOD START ---
+    auto customBgBtn = new QPushButton(tr("Select Custom BG"), this);
+    // We'll add it to the settingsBox layout
+    if (m_ui->settingsBox->layout()) {
+        m_ui->settingsBox->layout()->addWidget(customBgBtn);
+    }
+
+    connect(customBgBtn, &QPushButton::clicked, this, [this] {
+        QString fileName = QFileDialog::getOpenFileName(this,
+            tr("Select Background Image"), 
+            QDir::homePath(), 
+            tr("Images (*.png *.jpg *.jpeg *.svg)"));
+        
+        if (!fileName.isEmpty()) {
+            APPLICATION->settings()->set("CustomBackgroundPath", fileName);
+            // This triggers a refresh (we'll use the cat preview logic as a shortcut)
+            updateCatPreview(); 
+        }
+    });
+    // --- J3 CUSTOM BACKGROUND MOD END ---
 
     m_ui->catPreview->setGraphicsEffect(new QGraphicsOpacityEffect(this));
 
@@ -271,8 +292,16 @@ void AppearanceWidget::updateConsolePreview()
 
 void AppearanceWidget::updateCatPreview()
 {
-    QIcon catPackIcon(APPLICATION->themeManager()->getCatPack());
-    m_ui->catPreview->setIcon(catPackIcon);
+    QString customPath = APPLICATION->settings()->get("CustomBackgroundPath").toString();
+    QIcon bgIcon;
+
+    if (!customPath.isEmpty() && QFile::exists(customPath)) {
+        bgIcon = QIcon(customPath);
+    } else {
+        bgIcon = QIcon(APPLICATION->themeManager()->getCatPack());
+    }
+
+    m_ui->catPreview->setIcon(bgIcon);
 
     auto effect = dynamic_cast<QGraphicsOpacityEffect*>(m_ui->catPreview->graphicsEffect());
     if (effect)

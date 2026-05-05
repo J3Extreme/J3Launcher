@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 /*
- *  Prism Launcher - Minecraft Launcher
+ *  J3Launcher - Minecraft Launcher
  *  Copyright (C) 2022 Sefa Eyeoglu <contact@scrumplex.net>
  *  Copyright (C) 2023 TheKodeToad <TheKodeToad@proton.me>
  *
@@ -211,6 +211,8 @@ class MainWindow : public QMainWindow {
     void setStatusBarVisibility(bool);
 
     void lockToolbars(bool);
+    
+    void applyCustomBackground();
 
 #ifndef Q_OS_MAC
     void keyReleaseEvent(QKeyEvent* event) override;
